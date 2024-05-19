@@ -1,10 +1,13 @@
-﻿using Integration.Common;
+﻿using System.Collections.Concurrent;
+using Integration.Common;
 using Integration.Backend;
 
 namespace Integration.Service;
 
 public sealed class ItemIntegrationService
 {
+    private static readonly ConcurrentDictionary<string, object> _locks = new();
+
     //This is a dependency that is normally fulfilled externally.
     private ItemOperationBackend ItemIntegrationBackend { get; set; } = new();
 
@@ -14,15 +17,20 @@ public sealed class ItemIntegrationService
     // be allowed for performance reasons.
     public Result SaveItem(string itemContent)
     {
-        // Check the backend to see if the content is already saved.
-        if (ItemIntegrationBackend.FindItemsWithContent(itemContent).Count != 0)
+        var itemLock = _locks.GetOrAdd(itemContent, new object());
+
+        lock (itemLock)
         {
-            return new Result(false, $"Duplicate item received with content {itemContent}.");
+            // Check the backend to see if the content is already saved.
+            if (ItemIntegrationBackend.FindItemsWithContent(itemContent).Count != 0)
+            {
+                return new Result(false, $"Duplicate item received with content {itemContent}.");
+            }
+
+            var item = ItemIntegrationBackend.SaveItem(itemContent);
+
+            return new Result(true, $"Item with content {itemContent} saved with id {item.Id}");
         }
-
-        var item = ItemIntegrationBackend.SaveItem(itemContent);
-
-        return new Result(true, $"Item with content {itemContent} saved with id {item.Id}");
     }
 
     public List<Item> GetAllItems()
