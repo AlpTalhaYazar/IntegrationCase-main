@@ -1,0 +1,5 @@
+- Using distributed lock mechanisms can introduce additional complexity and latency.
+
+- Relying on a central database or Redis can create a single point of failure, affecting system reliability.
+
+- Ensuring data consistency in distributed systems can be challenging, potentially leading to data inconsistencies.
